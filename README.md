@@ -1,4 +1,5 @@
 # CPoldTetris
+_click on "CPoldTetris_V-1.0.0 Latest" on the right side of the screen to download the executable. -->_
 
 This is my old Tetris-like game I wrote some time ago in assembly for the classpad II, now ported to hollyhock. 
 The program was written in assembly, originally for an old loader I wrote to load the program. The program overrides some parts of itself because the memory map of my old loader was a litlle different. This does not affect the execution of the program, because these parts are not used...
