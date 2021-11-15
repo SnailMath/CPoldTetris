@@ -1,4 +1,6 @@
-APP_NAME:=Tetris30
+# run `make all` to compile the .hhk and .bin file, use `make` to compile only the .bin file.
+# The .hhk file is the original format, the bin file is a newer format.
+APP_NAME:=CPasmTemplate
 
 ifndef SDK_DIR
 $(error You need to define the SDK_DIR environment variable, and point it to the sdk/ folder)
@@ -7,12 +9,6 @@ endif
 AS:=sh4-elf-as
 AS_FLAGS:=
 
-CC:=sh4-elf-gcc
-CC_FLAGS:=-ffreestanding -fshort-wchar -Wall -Wextra -O2 -I $(SDK_DIR)/include/
-
-CXX:=sh4-elf-g++
-CXX_FLAGS:=-ffreestanding -fno-exceptions -fno-rtti -fshort-wchar -Wall -Wextra -O2 -I $(SDK_DIR)/include/
-
 LD:=sh4-elf-ld
 LD_FLAGS:=-nostdlib --no-undefined
 
@@ -20,23 +16,30 @@ READELF:=sh4-elf-readelf
 OBJCOPY:=sh4-elf-objcopy
 
 AS_SOURCES:=$(wildcard *.s)
-CC_SOURCES:=$(wildcard *.c)
-CXX_SOURCES:=$(wildcard *.cpp)
-OBJECTS:=$(AS_SOURCES:.s=.o) $(CC_SOURCES:.c=.o) $(CXX_SOURCES:.cpp=.o)
+OBJECTS:=$(AS_SOURCES:.s=.o)
 
 APP_ELF:=$(APP_NAME).hhk
+APP_BIN:=$(APP_NAME).bin
 
-all: $(APP_ELF) Makefile
+bin: $(APP_BIN) Makefile
+
+hhk: $(APP_ELF) Makefile
+
+all: $(APP_ELF) $(APP_BIN) Makefile
 
 clean:
-	rm -f $(OBJECTS) $(APP_ELF)
+	rm -f $(OBJECTS) $(APP_ELF) $(APP_BIN)
+	rm -f *~ /*~
 
 $(APP_ELF): $(OBJECTS) $(SDK_DIR)/sdk.o linker.ld
-	$(LD) -T linker.ld -o $@ $(LD_FLAGS) $(OBJECTS) $(SDK_DIR)/sdk.o
+	$(LD) -T linker.ld -o $@ $(LD_FLAGS) $(OBJECTS)  $(SDK_DIR)/os/functions/*.o
 	$(OBJCOPY) --set-section-flags .hollyhock_name=contents,strings,readonly $(APP_ELF) $(APP_ELF)
 	$(OBJCOPY) --set-section-flags .hollyhock_description=contents,strings,readonly $(APP_ELF) $(APP_ELF)
 	$(OBJCOPY) --set-section-flags .hollyhock_author=contents,strings,readonly $(APP_ELF) $(APP_ELF)
 	$(OBJCOPY) --set-section-flags .hollyhock_version=contents,strings,readonly $(APP_ELF) $(APP_ELF)
+
+$(APP_BIN): $(OBJECTS) $(SDK_DIR)/sdk.o linker.ld
+	$(LD) --oformat binary -T linker.ld -o $@ $(LD_FLAGS) $(OBJECTS)  $(SDK_DIR)/os/functions/*.o
 
 # We're not actually building sdk.o, just telling the user they need to do it
 # themselves. Just using the target to trigger an error when the file is
@@ -47,16 +50,4 @@ $(SDK_DIR)/sdk.o:
 %.o: %.s
 	$(AS) $< -o $@ $(AS_FLAGS)
 
-%.o: %.c
-	$(CC) -c $< -o $@ $(CC_FLAGS)
-
-# Break the build if global constructors are present:
-# Read the sections from the object file (with readelf -S) and look for any
-# called .ctors - if they exist, give the user an error message, delete the
-# object file (so that on subsequent runs of make the build will still fail)
-# and exit with an error code to halt the build.
-%.o: %.cpp
-	$(CXX) -c $< -o $@ $(CXX_FLAGS)
-	@$(READELF) $@ -S | grep ".ctors" > /dev/null && echo "ERROR: Global constructors aren't supported." && rm $@ && exit 1 || exit 0
-
-.PHONY: all clean
+.PHONY: bin hhk all clean
