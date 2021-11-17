@@ -4,14 +4,16 @@
 /* APP_VERSION     */ .string "1.0.1"
 
 /*
- * This program was written by SnailMath for the calculator classpad II. 
+ * This program was written by SnailMath / ThatLolaSnail for the calculator classpad II. 
  *
  * Before I had access to the hollyhock sdk written by The6P4C, ported by Stellaris-code, I wrote this program in assembly.
  * I wrote a loader to load this, but this version will work with the hollyhock loader.
  *
  * This was only a proof-of-concept, the code is not clean at all. A part of the subroutines from the sdk are overwritten with data, 
  * because with my old launcher this area was free to use. 
- *
+ * 
+ * The use of the number keys was added for DasHeiligeDönerhohn
+ * 
  */
 
 .align 1 !make sure everything is aligned.
@@ -107,7 +109,7 @@ bf okNew
 !nop
 !bf okNew
 !	!       !Error while drawing new tile, game Over
-	mov.l setCursor, r2
+	mov.l setCursor2, r2
 	mov #7, r4
 	jsr @r2
 	mov #10, r5
@@ -116,7 +118,7 @@ bf okNew
 	mov r0, r4
 	jsr @r2
 	mov #1, r5
-	mov.l drawScreen, r2
+	mov.l drawScreen2, r2
 	jsr @r2
 	nop
 	mov.l gotimer, r0
@@ -134,6 +136,7 @@ bf okNew
         GameOver:       .string " GAME  OVER "
         .align 2
 	tetris30:	.string "     Tetris by SnailMath   "
+	drawScreen2:	.long _LCD_Refresh
 .align 2
 feldbaseA21b:	.long feldbase21 !0x8c060000
 !feldbaseA18:	.long feldbase21 + 60
@@ -265,9 +268,16 @@ bf noshift
 	bra reset!jsr @r2
 	nop
 noshift:
+
+mov.l upchicken7, r3
+cmp/eq r3,r7
+bt up
+
 mov.l up7, r3
 cmp/eq r3, r7
 bf noup
+
+up:
 	bsr drawTile
 	mov #0, r5
 
@@ -296,24 +306,49 @@ bf noup
 	BSR subDraw
 	mov #1, r0
 noup:
+
 mov.l left8, r3
 cmp/eq r3, r8
 bf noleft
 	bra left
 	nop
 noleft:
+
+mov.l leftchicken7, r3
+cmp/eq r3,r7
+bf nochickenleft
+	bra left
+	nop
+nochickenleft:
+
 mov.l down7, r3
 cmp/eq r3, r7
 bf noDown
 	mov #1, r0
 	mov #1, r4 !reset the falling timer (pice falls right away)
 noDown:
+
+mov.l downchicken7, r3
+cmp/eq r3, r7
+bf nochickendown
+	mov #1, r0
+	mov #1, r4 !reset the falling timer (pice falls right away)
+nochickendown:
+
 mov.l right8, r3
 cmp/eq r3, r8
 bf noright
 	bra  right
 	nop
 noright:
+
+mov.l rightchicken8, r3
+cmp/eq r3, r8
+bf nochickenright
+	bra right
+	nop
+nochickenright:
+
 mov.l key7, r3
 cmp/eq r3, r7
 bf nokey7
@@ -346,6 +381,7 @@ bf nokey7
 	BSR subDraw
 	mov #1, r0
 nokey7:
+
 mov.l back8, r3
 cmp/eq r3, r8
 bf noback
@@ -484,6 +520,12 @@ timerinit:	.long 0x00020000
 timer:		.long 0x00000001 ! -256
 debounce:	.long 0x00000004 !f the keys are bouncing, make higher, if the keys are not responding, make lower
 !timersub:	.word 256 !2048  !at first, i subtracted 256, but it speeded up to fast. Now I divide by 32 and subtract
+
+upchicken7:	.long 0x00200000
+rightchicken8:	.long 0x00000010
+leftchicken7:	.long 0x10000000
+downchicken7:	.long 0x00080000
+
 
 
 !========== T I L E ==========
